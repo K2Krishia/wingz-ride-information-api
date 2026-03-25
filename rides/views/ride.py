@@ -1,16 +1,13 @@
 from rest_framework import viewsets
-from rest_framework.response import Response
-from django.db.models import Prefetch, Q, F, FloatField
+from django.db.models import Prefetch, F, FloatField
 from django.db.models.functions import ACos, Cos, Sin, Radians, Cast
 from django.utils import timezone
 from datetime import timedelta
-from math import radians, cos, sin, asin, sqrt
+from math import radians, cos
 
-from rides.models import Ride, RideEvent, User
+from rides.models import Ride, RideEvent
 from rides.serializers import (
-    RideSerializer, RideListSerializer, RideWriteSerializer,
-    RideEventSerializer,
-    UserSerializer, UserWriteSerializer
+    RideSerializer, RideListSerializer, RideWriteSerializer
 )
 from rides.permissions import IsAdminUser
 from rides.filters import RideFilter
@@ -18,13 +15,13 @@ from rides.filters import RideFilter
 
 class RideViewSet(viewsets.ModelViewSet):
     """
-    ViewSet for managing Rides (read-only).
+    ViewSet for managing Rides.
     
     Features:
     - Admin-only access (role='admin' required)
     - Filtering by status and rider email
     - Sorting by pickup_time and distance to pickup location
-    - Pagination (configured in settings: 10 items per page)
+    - Pagination with customizable page size (default: 10, max: 100)
     - Optimized queries to minimize database hits (2-3 queries total)
     - Returns only today's ride events for performance
     
@@ -37,13 +34,15 @@ class RideViewSet(viewsets.ModelViewSet):
         * distance: Sort by distance to pickup (requires latitude & longitude)
     - latitude: GPS latitude for distance calculation (required with distance sorting)
     - longitude: GPS longitude for distance calculation (required with distance sorting)
+    - page: Page number (default: 1)
+    - page_size: Items per page (default: 10, max: 100)
     
     Examples:
     - /api/rides/?status=en-route
     - /api/rides/?rider_email=alice@example.com
     - /api/rides/?ordering=-pickup_time
     - /api/rides/?ordering=distance&latitude=37.7749&longitude=-122.4194
-    - /api/rides/?status=completed&ordering=-pickup_time&page=2
+    - /api/rides/?status=completed&ordering=-pickup_time&page=2&page_size=20
     """
     permission_classes = [IsAdminUser]
     filterset_class = RideFilter
@@ -178,19 +177,3 @@ class RideViewSet(viewsets.ModelViewSet):
         elif self.action in ['create', 'update', 'partial_update']:
             return RideWriteSerializer
         return RideSerializer
-    
-    def list(self, request, *args, **kwargs):
-        """
-        List rides with pagination.
-        
-        Returns paginated results with count, next, and previous links.
-        """
-        queryset = self.filter_queryset(self.get_queryset())
-        
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-        
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
