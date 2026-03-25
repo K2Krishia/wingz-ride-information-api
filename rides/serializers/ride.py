@@ -21,6 +21,30 @@ class RideWriteSerializer(serializers.ModelSerializer):
             'pickup_time'
         ]
         read_only_fields = ['id_ride']
+    
+    def validate_pickup_latitude(self, value):
+        """Validate pickup latitude is in valid range"""
+        if not (-90 <= value <= 90):
+            raise serializers.ValidationError(f"Latitude must be between -90 and 90. Got: {value}")
+        return value
+    
+    def validate_pickup_longitude(self, value):
+        """Validate pickup longitude is in valid range"""
+        if not (-180 <= value <= 180):
+            raise serializers.ValidationError(f"Longitude must be between -180 and 180. Got: {value}")
+        return value
+    
+    def validate_dropoff_latitude(self, value):
+        """Validate dropoff latitude is in valid range"""
+        if not (-90 <= value <= 90):
+            raise serializers.ValidationError(f"Latitude must be between -90 and 90. Got: {value}")
+        return value
+    
+    def validate_dropoff_longitude(self, value):
+        """Validate dropoff longitude is in valid range"""
+        if not (-180 <= value <= 180):
+            raise serializers.ValidationError(f"Longitude must be between -180 and 180. Got: {value}")
+        return value
 
 
 class RideSerializer(serializers.ModelSerializer):

@@ -1,6 +1,7 @@
 from rest_framework import viewsets
-from django.db.models import Prefetch, F, FloatField
-from django.db.models.functions import ACos, Cos, Sin, Radians, Cast
+from rest_framework.exceptions import ValidationError
+from django.db.models import Prefetch, F, FloatField, Value
+from django.db.models.functions import ACos, Cos, Sin, Radians, Cast, Greatest, Least
 from django.utils import timezone
 from datetime import timedelta
 from math import radians, cos
@@ -75,14 +76,35 @@ class RideViewSet(viewsets.ModelViewSet):
         longitude = self.request.query_params.get('longitude')
         ordering = self.request.query_params.get('ordering', '-pickup_time')
         
-        # distance annotation
-        if latitude and longitude and 'distance' in ordering:
+        # validation: distance sorting requires coordinates
+        if 'distance' in ordering:
+            if not latitude or not longitude:
+                raise ValidationError({
+                    'detail': 'Distance sorting requires both latitude and longitude parameters.',
+                    'example': '?ordering=distance&latitude=37.7749&longitude=-122.4194'
+                })
+            
             try:
                 lat = float(latitude)
                 lon = float(longitude)
+                
+                # validation: coordinate ranges
+                if not (-90 <= lat <= 90):
+                    raise ValidationError({
+                        'latitude': f'Latitude must be between -90 and 90. Got: {lat}'
+                    })
+                if not (-180 <= lon <= 180):
+                    raise ValidationError({
+                        'longitude': f'Longitude must be between -180 and 180. Got: {lon}'
+                    })
+                
                 queryset = self._add_distance_annotation(queryset, lat, lon)
-            except (ValueError, TypeError):
-                pass
+            except ValueError:
+                raise ValidationError({
+                    'detail': 'Latitude and longitude must be valid numbers.',
+                    'latitude': latitude,
+                    'longitude': longitude
+                })
         
 
         if ordering:
@@ -152,10 +174,14 @@ class RideViewSet(viewsets.ModelViewSet):
         # But since Django doesn't have asin, we use:
         # distance = R * acos(cos(lat1) * cos(lat2) * cos(lon2 - lon1) + sin(lat1) * sin(lat2))
         
+        # Clamp the ACos input to [-1, 1] to prevent math domain errors from floating point precision
+        acos_input = 1.0 - 2.0 * a
+        acos_input_clamped = Greatest(Least(acos_input, Value(1.0)), Value(-1.0))
+        
         # Direct Haversine using available Django functions
         distance = 6371.0 * (  # Earth radius in kilometers
             2.0 * ACos(
-                1.0 - 2.0 * a,
+                acos_input_clamped,
                 output_field=FloatField()
             )
         )
