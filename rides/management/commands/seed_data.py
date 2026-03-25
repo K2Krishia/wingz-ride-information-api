@@ -313,6 +313,138 @@ class Command(BaseCommand):
             created_at=now - timedelta(days=3, hours=1)
         )
         
+        # create rides with specific pickup/dropoff events for bonus SQL query
+        self.stdout.write('Creating rides for bonus SQL report (trips > 1 hour)...')
+        
+        # helper function to create completed rides with pickup/dropoff events
+        def create_completed_ride_with_events(rider, driver, pickup_time, duration_hours):
+            ride = Ride.objects.create(
+                id_rider=rider,
+                id_driver=driver,
+                status='completed',
+                pickup_latitude=37.7749,
+                pickup_longitude=-122.4194,
+                dropoff_latitude=37.3382,
+                dropoff_longitude=-121.8863,
+                pickup_time=pickup_time
+            )
+            
+            # create pickup event
+            RideEvent.objects.create(
+                id_ride=ride,
+                description='Status changed to pickup',
+                created_at=pickup_time
+            )
+            
+            # create dropoff event
+            RideEvent.objects.create(
+                id_ride=ride,
+                description='Status changed to dropoff',
+                created_at=pickup_time + timedelta(hours=duration_hours)
+            )
+            
+            return ride
+        
+        # January 2024 trips (3 months ago)
+        base_date = timezone.now().replace(year=2024, month=1, day=15)
+        
+        # John Smith - 4 trips > 1 hour in Jan 2024
+        for i in range(4):
+            create_completed_ride_with_events(
+                riders[0], drivers[0], 
+                base_date + timedelta(days=i*2), 
+                1.5 + i*0.3  # 1.5, 1.8, 2.1, 2.4 hours
+            )
+        
+        # Jane Doe - 5 trips > 1 hour in Jan 2024
+        for i in range(5):
+            create_completed_ride_with_events(
+                riders[1], drivers[1], 
+                base_date + timedelta(days=i*2, hours=i), 
+                1.2 + i*0.2  # 1.2, 1.4, 1.6, 1.8, 2.0 hours
+            )
+        
+        # Mike Johnson - 2 trips > 1 hour in Jan 2024
+        for i in range(2):
+            create_completed_ride_with_events(
+                riders[2], drivers[2], 
+                base_date + timedelta(days=i*3), 
+                1.8 + i*0.5  # 1.8, 2.3 hours
+            )
+        
+        # February 2024 trips
+        base_date = timezone.now().replace(year=2024, month=2, day=10)
+        
+        # John Smith - 7 trips > 1 hour in Feb 2024
+        for i in range(7):
+            create_completed_ride_with_events(
+                riders[3], drivers[0], 
+                base_date + timedelta(days=i*2), 
+                1.3 + i*0.2  # varying durations
+            )
+        
+        # Jane Doe - 5 trips > 1 hour in Feb 2024
+        for i in range(5):
+            create_completed_ride_with_events(
+                riders[4], drivers[1], 
+                base_date + timedelta(days=i*2, hours=2), 
+                1.5 + i*0.3
+            )
+        
+        # March 2024 trips
+        base_date = timezone.now().replace(year=2024, month=3, day=5)
+        
+        # John Smith - 2 trips > 1 hour in Mar 2024
+        for i in range(2):
+            create_completed_ride_with_events(
+                riders[5], drivers[0], 
+                base_date + timedelta(days=i*4), 
+                2.0 + i*0.5
+            )
+        
+        # Jane Doe - 2 trips > 1 hour in Mar 2024
+        for i in range(2):
+            create_completed_ride_with_events(
+                riders[0], drivers[1], 
+                base_date + timedelta(days=i*4, hours=3), 
+                1.7 + i*0.4
+            )
+        
+        # Mike Johnson - 11 trips > 1 hour in Mar 2024
+        for i in range(11):
+            create_completed_ride_with_events(
+                riders[1], drivers[2], 
+                base_date + timedelta(days=i*2, hours=i%6), 
+                1.1 + i*0.1
+            )
+        
+        # April 2024 trips
+        base_date = timezone.now().replace(year=2024, month=4, day=12)
+        
+        # Jane Doe - 7 trips > 1 hour in Apr 2024
+        for i in range(7):
+            create_completed_ride_with_events(
+                riders[2], drivers[1], 
+                base_date + timedelta(days=i*2), 
+                1.4 + i*0.2
+            )
+        
+        # Mike Johnson - 3 trips > 1 hour in Apr 2024
+        for i in range(3):
+            create_completed_ride_with_events(
+                riders[3], drivers[2], 
+                base_date + timedelta(days=i*3, hours=2), 
+                1.9 + i*0.3
+            )
+        
+        # Add some trips < 1 hour (should not appear in report)
+        for i in range(3):
+            create_completed_ride_with_events(
+                riders[4], drivers[3], 
+                base_date + timedelta(days=i), 
+                0.5  # 30 minutes - should not appear in report
+            )
+        
         self.stdout.write(self.style.SUCCESS(f'Successfully seeded database!'))
         self.stdout.write(self.style.SUCCESS(f'Created:'))
         self.stdout.write(f'  - {User.objects.filter(role="admin").count()} admin users')
@@ -324,3 +456,7 @@ class Command(BaseCommand):
         self.stdout.write('  Admin: admin@wingz.com / admin123')
         self.stdout.write('  Driver: john.driver@wingz.com / driver123')
         self.stdout.write('  Rider: alice@example.com / rider123')
+        self.stdout.write(self.style.SUCCESS('\\nBonus SQL query data created:'))
+        self.stdout.write('  - 51 completed trips with pickup/dropoff events')
+        self.stdout.write('  - Trips spanning Jan-Apr 2024 for 3 drivers')
+        self.stdout.write('  - Run the bonus SQL query to see the report!')
