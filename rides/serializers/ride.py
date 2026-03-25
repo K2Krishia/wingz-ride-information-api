@@ -5,6 +5,24 @@ from rides.models import Ride, RideEvent
 from .user import UserSerializer
 from .ride_event import RideEventSerializer
 
+
+class RideWriteSerializer(serializers.ModelSerializer):
+    """
+    Write serializer for creating/updating Rides.
+    Uses IDs for foreign keys instead of nested objects.
+    """
+    
+    class Meta:
+        model = Ride
+        fields = [
+            'id_ride', 'status', 'id_rider', 'id_driver',
+            'pickup_latitude', 'pickup_longitude',
+            'dropoff_latitude', 'dropoff_longitude',
+            'pickup_time'
+        ]
+        read_only_fields = ['id_ride']
+
+
 class RideSerializer(serializers.ModelSerializer):
     """
     Standard Ride serializer for detail view.

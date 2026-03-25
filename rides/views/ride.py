@@ -6,12 +6,17 @@ from django.utils import timezone
 from datetime import timedelta
 from math import radians, cos, sin, asin, sqrt
 
-from rides.models import Ride, RideEvent
-from rides.serializers import RideSerializer, RideListSerializer
+from rides.models import Ride, RideEvent, User
+from rides.serializers import (
+    RideSerializer, RideListSerializer, RideWriteSerializer,
+    RideEventSerializer,
+    UserSerializer, UserWriteSerializer
+)
 from rides.permissions import IsAdminUser
 from rides.filters import RideFilter
 
-class RideViewSet(viewsets.ReadOnlyModelViewSet):
+
+class RideViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing Rides (read-only).
     
@@ -162,13 +167,16 @@ class RideViewSet(viewsets.ReadOnlyModelViewSet):
     
     def get_serializer_class(self):
         """
-        Use different serializers for list and detail views.
+        Use different serializers for different actions.
         
         - List view: RideListSerializer (optimized, today's events only)
         - Detail view: RideSerializer (complete, all events)
+        - Create/Update: RideWriteSerializer (foreign keys as IDs)
         """
         if self.action == 'list':
             return RideListSerializer
+        elif self.action in ['create', 'update', 'partial_update']:
+            return RideWriteSerializer
         return RideSerializer
     
     def list(self, request, *args, **kwargs):

@@ -1,5 +1,9 @@
-from .user import UserSerializer
+from .user import UserSerializer, UserWriteSerializer
 from .ride_event import RideEventSerializer
-from .ride import RideSerializer, RideListSerializer
+from .ride import RideSerializer, RideListSerializer, RideWriteSerializer
 
-__all__ = ['UserSerializer', 'RideEventSerializer', 'RideSerializer', 'RideListSerializer']
+__all__ = [
+    'UserSerializer', 'UserWriteSerializer',
+    'RideEventSerializer', 
+    'RideSerializer', 'RideListSerializer', 'RideWriteSerializer'
+]
